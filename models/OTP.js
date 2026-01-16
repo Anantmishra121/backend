@@ -30,7 +30,8 @@ const OTPSchema = new mongoose.Schema({
 async function sendVerificationEmail(email, otp) {
     try {
         const name = email.split('@')[0].split('.').map(part => part.replace(/\d+/g, '')).join(' ');
-        const mailResponse = mailSender(email, 'OTP Verification Email', otpTemplate(otp, name));
+        // await the mail sender here so errors are propagated to the returned promise
+        const mailResponse = await mailSender(email, 'OTP Verification Email', otpTemplate(otp, name));
     } catch (error) {
         throw error;
     }
@@ -40,20 +41,21 @@ async function sendVerificationEmail(email, otp) {
 async function sendPasswordResetEmail(email, otp) {
     try {
         const name = email.split('@')[0].split('.').map(part => part.replace(/\d+/g, '')).join(' ');
-        const mailResponse = mailSender(email, 'Password Reset OTP', passwordResetOtpTemplate(otp, name));
+        const mailResponse = await mailSender(email, 'Password Reset OTP', passwordResetOtpTemplate(otp, name));
     } catch (error) {
         throw error;
     }
 }
 
 // Pre-save middleware to send email when new OTP is created
-OTPSchema.pre('save', async function(next) {
+// Send email in background (do not block save) and log errors
+OTPSchema.pre('save', function(next) {
     // Only send an email when a new document is created
     if (this.isNew) {
         if (this.type === 'passwordReset') {
-            await sendPasswordResetEmail(this.email, this.otp);
+            sendPasswordResetEmail(this.email, this.otp).catch(err => console.error('Error sending password reset OTP:', err));
         } else {
-            await sendVerificationEmail(this.email, this.otp);
+            sendVerificationEmail(this.email, this.otp).catch(err => console.error('Error sending verification OTP:', err));
         }
     }
     next();

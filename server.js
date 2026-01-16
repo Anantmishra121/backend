@@ -34,14 +34,6 @@ app.use(
     })
 )
 
-// Server configuration
-const PORT = process.env.PORT || 5000;
-
-// Start server
-app.listen(PORT, () => {
-    console.log(`Server Started on PORT ${PORT}`);
-});
-
 // Establish connections
 connectDB();
 cloudinaryConnect();
@@ -59,3 +51,14 @@ app.get('/', (req, res) => {
     <p>Server is running successfully!</p>
     </div>`);
 })
+
+// Only listen if not in Vercel serverless environment
+if (process.env.VERCEL === undefined) {
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+        console.log(`Server Started on PORT ${PORT}`);
+    });
+}
+
+// Export for Vercel serverless functions
+module.exports = app;

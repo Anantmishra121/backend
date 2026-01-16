@@ -17,6 +17,23 @@ const profileRoutes = require('./routes/profile');
 const paymentRoutes = require('./routes/payments');
 const courseRoutes = require('./routes/course');
 
+// Initialize services
+let dbConnected = false;
+
+const initializeServices = async () => {
+    if (!dbConnected) {
+        try {
+            await connectDB();
+            cloudinaryConnect();
+            dbConnected = true;
+            console.log('Services initialized');
+        } catch (error) {
+            console.error('Service initialization failed:', error.message);
+            dbConnected = false;
+        }
+    }
+};
+
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
@@ -35,9 +52,20 @@ app.use(fileUpload({
     tempFileDir: '/tmp'
 }));
 
-// Initialize database and cloudinary
-connectDB().catch(err => console.error('DB init error:', err));
-cloudinaryConnect();
+// Middleware to ensure database connection before handling requests
+app.use(async (req, res, next) => {
+    try {
+        await initializeServices();
+        next();
+    } catch (error) {
+        console.error('DB connection middleware error:', error);
+        return res.status(503).json({
+            success: false,
+            message: 'Service temporarily unavailable',
+            error: error.message
+        });
+    }
+});
 
 // Routes
 app.use('/api/v1/auth', userRoutes);
@@ -55,11 +83,11 @@ app.get('/', (req, res) => {
 
 // Error handling middleware (must be last)
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    res.status(500).json({
+    console.error('Request error:', err);
+    res.status(err.status || 500).json({
         success: false,
-        message: 'Server error',
-        error: err.message
+        message: err.message || 'Server error',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
 });
 
@@ -68,6 +96,8 @@ module.exports = app;
 
 // Local development
 if (process.env.VERCEL === undefined) {
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    initializeServices().then(() => {
+        const PORT = process.env.PORT || 5000;
+        app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    });
 }

@@ -51,6 +51,11 @@ app.use(
 connectDB();
 cloudinaryConnect();
 
+// Add error handler for unhandled database errors
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // Mount routes
 app.use('/api/v1/auth', userRoutes);
 app.use('/api/v1/profile', profileRoutes);

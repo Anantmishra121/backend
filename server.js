@@ -57,24 +57,6 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection:', reason);
 });
 
-// Middleware to ensure DB connection on each request (for serverless)
-app.use(async (req, res, next) => {
-    try {
-        // Ensure database is connected before processing request
-        if (mongoose.connection.readyState !== 1) {
-            await connectDB();
-        }
-        next();
-    } catch (error) {
-        console.error('DB connection error:', error.message);
-        return res.status(503).json({
-            success: false,
-            message: 'Database service unavailable',
-            error: error.message
-        });
-    }
-});
-
 // Mount routes
 app.use('/api/v1/auth', userRoutes);
 app.use('/api/v1/profile', profileRoutes);

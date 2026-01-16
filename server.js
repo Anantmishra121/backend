@@ -23,7 +23,20 @@ app.use(express.json()); // Parse JSON request bodies
 app.use(cookieParser());
 app.use(
     cors({
-        origin: "*", // Allow all origins for development
+        origin: function (origin, callback) {
+            const allowedOrigins = [
+                "https://frontend-one-neon-90.vercel.app",
+                "http://localhost:3000",
+                "http://localhost:5000",
+                process.env.FRONTEND_URL
+            ];
+            
+            if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+                callback(null, true);
+            } else {
+                callback(new Error("Not allowed by CORS"));
+            }
+        },
         credentials: true
     })
 );

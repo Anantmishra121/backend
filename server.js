@@ -1,13 +1,11 @@
 // Main server file for LearningEdge backend application
-const express = require('express')
-const app = express();
-
-// Third-party packages
+const express = require('express');
 const fileUpload = require('express-fileupload');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
-const mongoose = require('mongoose');
 require('dotenv').config();
+
+const app = express();
 
 // Database and cloudinary connections
 const { connectDB } = require('./config/database');
@@ -19,75 +17,57 @@ const profileRoutes = require('./routes/profile');
 const paymentRoutes = require('./routes/payments');
 const courseRoutes = require('./routes/course');
 
-// Middleware setup
-app.use(express.json()); // Parse JSON request bodies
+// Middleware
+app.use(express.json());
 app.use(cookieParser());
-app.use(
-    cors({
-        origin: [
-            "https://frontend-one-neon-90.vercel.app",
-            "http://localhost:3000",
-            "http://localhost:5000"
-        ],
-        credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization']
-    })
-);
-app.use(
-    fileUpload({
-        useTempFiles: true,
-        tempFileDir: '/tmp'
-    })
-)
+app.use(cors({
+    origin: [
+        "https://frontend-one-neon-90.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5000"
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(fileUpload({
+    useTempFiles: true,
+    tempFileDir: '/tmp'
+}));
 
-// Establish connections
-(async () => {
-    try {
-        await connectDB();
-        cloudinaryConnect();
-        console.log('All services initialized');
-    } catch (error) {
-        console.error('Service initialization error:', error.message);
-    }
-})();
+// Initialize database and cloudinary
+connectDB().catch(err => console.error('DB init error:', err));
+cloudinaryConnect();
 
-// Add error handler for unhandled database errors
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection:', reason);
-});
-
-// Mount routes
+// Routes
 app.use('/api/v1/auth', userRoutes);
 app.use('/api/v1/profile', profileRoutes);
 app.use('/api/v1/payment', paymentRoutes);
 app.use('/api/v1/course', courseRoutes);
 
-// Default route
+// Health check
 app.get('/', (req, res) => {
-    res.send(`<div>
-    <h1>LearningEdge Backend Server</h1>
-    <p>Server is running successfully!</p>
-    </div>`);
-})
-
-// Global error handler
-app.use((err, req, res, next) => {
-    console.error('Error:', err.message);
-    res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? err.message : 'Server error'
+    res.json({
+        success: true,
+        message: 'LearningEdge Backend Server is running'
     });
 });
 
-// Only listen if not in Vercel serverless environment
+// Error handling middleware (must be last)
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({
+        success: false,
+        message: 'Server error',
+        error: err.message
+    });
+});
+
+// Export for Vercel
+module.exports = app;
+
+// Local development
 if (process.env.VERCEL === undefined) {
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-        console.log(`Server Started on PORT ${PORT}`);
-    });
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
-
-// Export for Vercel serverless functions
-module.exports = app;

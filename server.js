@@ -23,21 +23,14 @@ app.use(express.json()); // Parse JSON request bodies
 app.use(cookieParser());
 app.use(
     cors({
-        origin: function (origin, callback) {
-            const allowedOrigins = [
-                "https://frontend-one-neon-90.vercel.app",
-                "http://localhost:3000",
-                "http://localhost:5000",
-                process.env.FRONTEND_URL
-            ];
-            
-            if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-                callback(null, true);
-            } else {
-                callback(new Error("Not allowed by CORS"));
-            }
-        },
-        credentials: true
+        origin: [
+            "https://frontend-one-neon-90.vercel.app",
+            "http://localhost:3000",
+            "http://localhost:5000"
+        ],
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization']
     })
 );
 app.use(
@@ -69,6 +62,16 @@ app.get('/', (req, res) => {
     <p>Server is running successfully!</p>
     </div>`);
 })
+
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('Error:', err.message);
+    res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? err.message : 'Server error'
+    });
+});
 
 // Only listen if not in Vercel serverless environment
 if (process.env.VERCEL === undefined) {

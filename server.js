@@ -6,6 +6,7 @@ const app = express();
 const fileUpload = require('express-fileupload');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 // Database and cloudinary connections
@@ -41,26 +42,34 @@ app.use(
 )
 
 // Establish connections
-connectDB().catch(err => {
-    console.error('Failed to connect to database:', err.message);
-});
-cloudinaryConnect();
+(async () => {
+    try {
+        await connectDB();
+        cloudinaryConnect();
+        console.log('All services initialized');
+    } catch (error) {
+        console.error('Service initialization error:', error.message);
+    }
+})();
 
 // Add error handler for unhandled database errors
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    console.error('Unhandled Rejection:', reason);
 });
 
 // Middleware to ensure DB connection on each request (for serverless)
 app.use(async (req, res, next) => {
     try {
-        await connectDB();
+        // Ensure database is connected before processing request
+        if (mongoose.connection.readyState !== 1) {
+            await connectDB();
+        }
         next();
     } catch (error) {
-        console.error('DB connection failed in middleware:', error);
+        console.error('DB connection error:', error.message);
         return res.status(503).json({
             success: false,
-            message: 'Database connection failed',
+            message: 'Database service unavailable',
             error: error.message
         });
     }

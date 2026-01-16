@@ -5,25 +5,33 @@ let isConnected = false;
 
 // Function to connect to the MongoDB database
 exports.connectDB = async () => {
-    if (isConnected) {
-        console.log('Using existing database connection');
+    // If already connected, return early
+    if (mongoose.connection.readyState === 1) {
+        console.log('Database connection is ready');
+        isConnected = true;
         return;
     }
     
     try {
-        console.log('Attempting to connect to database...');
+        console.log('Attempting to connect to MongoDB...');
+        console.log('Database URL:', process.env.DATABASE_URL ? 'Set' : 'NOT SET');
+        
+        if (!process.env.DATABASE_URL) {
+            throw new Error('DATABASE_URL environment variable is not set');
+        }
+        
         await mongoose.connect(process.env.DATABASE_URL, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            maxPoolSize: 5,
-            minPoolSize: 1,
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
         });
         
         isConnected = true;
-        console.log('Database connected successfully');
+        console.log('✓ Database connected successfully');
         return mongoose;
     } catch (error) {
-        console.error(`Error while connecting server with Database:`, error.message);
+        console.error('✗ Database connection error:', error.message);
         isConnected = false;
         throw error;
     }

@@ -41,12 +41,29 @@ app.use(
 )
 
 // Establish connections
-connectDB();
+connectDB().catch(err => {
+    console.error('Failed to connect to database:', err.message);
+});
 cloudinaryConnect();
 
 // Add error handler for unhandled database errors
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Middleware to ensure DB connection on each request (for serverless)
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (error) {
+        console.error('DB connection failed in middleware:', error);
+        return res.status(503).json({
+            success: false,
+            message: 'Database connection failed',
+            error: error.message
+        });
+    }
 });
 
 // Mount routes

@@ -78,8 +78,10 @@ exports.deleteCategory = async (req, res) => {
 // ================ GET ALL CATEGORIES ================
 exports.showAllCategories = async (req, res) => {
     try {
+        console.log('Fetching all categories...');
         // Fetch all categories from database
-        const allCategories = await Category.find({}, { name: true, description: true });
+        const allCategories = await Category.find({}, { name: true, description: true }).lean();
+        console.log('Categories fetched:', allCategories.length);
 
         // Return response
         res.status(200).json({
@@ -90,10 +92,11 @@ exports.showAllCategories = async (req, res) => {
     }
     catch (error) {
         console.log('Error while fetching all categories');
-        console.log(error);
+        console.error('Full error:', error);
         res.status(500).json({
             success: false,
-            message: 'Error while fetching all categories'
+            message: 'Error while fetching all categories',
+            error: error.message
         })
     }
 }

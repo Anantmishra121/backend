@@ -1,19 +1,31 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
+let isConnected = false;
+
 // Function to connect to the MongoDB database
-exports.connectDB = () => {
-    mongoose.connect(process.env.DATABASE_URL, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-    })
-        .then(() => {
-            console.log('Database connected succcessfully');
-        })
-        .catch(error => {
-            console.log(`Error while connecting server with Database`);
-            console.log(error);
-            process.exit(1);
-        })
+exports.connectDB = async () => {
+    if (isConnected) {
+        console.log('Using existing database connection');
+        return;
+    }
+    
+    try {
+        console.log('Attempting to connect to database...');
+        await mongoose.connect(process.env.DATABASE_URL, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            maxPoolSize: 5,
+            minPoolSize: 1,
+        });
+        
+        isConnected = true;
+        console.log('Database connected successfully');
+        return mongoose;
+    } catch (error) {
+        console.error(`Error while connecting server with Database:`, error.message);
+        isConnected = false;
+        throw error;
+    }
 };
 
